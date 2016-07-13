@@ -12,6 +12,12 @@ headers_ = {
     "User-Agent": user_agent,
     "Connection": "keep-alive",
 }
+ftags = ['og:description','"','/>','content=']
+html_entities = {
+    '&#039;': '\'',
+    '&gt;': '>',
+    '.': '. '
+}
 #host = argv[1]
 nick = "grep_bot"
 PORT = 6667
@@ -26,7 +32,7 @@ def irc(HOST, channel):
     s.send('NICK %s\r\n' %nick)
     s.send('JOIN %s\r\n' %channel)
     while True:
-        data = s.recv(1024)
+        data = s.recv(5000)
         mss = data.split(':')[-1]
         if data.find('PING') != -1:
             s.send('PONG ' +  data.split()[1] +'\r\n')
@@ -86,6 +92,23 @@ def irc(HOST, channel):
                     director = director.replace(tag,'')
                 director = director.capitalize()
                 s.send('PRIVMSG %s :DIRECTOR:%s\r\n' %(channel, director))
+        match = re.compile(r'((http|https)+\:..\d\w+\.\w+\/\w{1,6}\/\w{3}\/\d+\S+)')
+        _8churl = re.search(match,data)
+        if _8churl:
+            thread_url = _8churl.group()
+            get = urllib2.Request(thread_url, headers=headers_)
+            html = urllib2.urlopen(get)
+            html = html.read()
+            match = re.compile(r'(og\:\w{11}\"\s\w+\=\"(.*?)+\>)')
+            op = re.search(match, html)
+            if op:
+                op_post = op.group()
+                for t in ftags:
+                    op_post = op_post.replace(t,'')
+                for i, n in html_entities.iteritems():
+                    op_post = op_post.replace(i,n)
+                s.send('PRIVMSG %s :[OP]: %s\r\n' %(channel, op_post))
+
 if __name__ == '__main__':
     def main():
         irc(argv[1], argv[2])
