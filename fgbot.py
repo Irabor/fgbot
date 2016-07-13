@@ -12,7 +12,7 @@ headers_ = {
     "User-Agent": user_agent,
     "Connection": "keep-alive",
 }
-ftags = ['og:description','"','/>','content=']
+ftags = ['og:description','"','/>','content=', 'title>', '>','<']
 html_entities = {
     '&#039;': '\'',
     '&gt;': '>',
@@ -70,6 +70,7 @@ def irc(HOST, channel):
                 for tag in tags:
                     genre_ = genre_.replace(tag,'')
                 s.send('PRIVMSG %s :GENRE:%s\r\n' %(channel,genre_))
+            #8ch op
             match = re.compile(r'(meta\s\w{8}\=\S+\:\w{11}\"\s\w+\=\"(.*?)\")') #description
             descrip = re.search(match,html)
             if descrip == None:
@@ -108,6 +109,20 @@ def irc(HOST, channel):
                 for i, n in html_entities.iteritems():
                     op_post = op_post.replace(i,n)
                 s.send('PRIVMSG %s :[OP]: %s\r\n' %(channel, op_post))
+        #youtube title
+        match = re.compile(r'((https)+\:)\S+youtube\.\w+\/\w+\?\w\=\S+')
+        yt_url = re.search(match, data)
+        if yt_url:
+            get = urllib2.Request(yt_url.group(),headers=headers_)
+            html = urllib2.urlopen(get)
+            html = html.read()
+            match = re.compile(r'(title\>(.*?)\<)') #youtube title
+            title = re.search(match,html)
+            if title:
+                title = title.group()
+                for t in ftags:
+                    title = title.replace(t,'')
+                s.send('PRIVMSG %s :[TITLE] %s \r\n' %(channel, title))
 
 if __name__ == '__main__':
     def main():
