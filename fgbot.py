@@ -27,26 +27,39 @@ gnu = None
 def irc(HOST, channel):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
-    s.recv(4000)
+    #s.recv(4000)
     s.send('USER duff duff duff :duff IRC\r\n')
     s.send('NICK %s\r\n' %nick)
     s.send('JOIN %s\r\n' %channel)
     while True:
         data = s.recv(5000)
         mss = data.split(':')[-1]
+        print data
         if data.find('PING') != -1:
             s.send('PONG ' +  data.split()[1] +'\r\n')
         with open('log.txt','wb')as f:
             f.write(mss)
+        if data.find('KICK %s %s' %(channel, nick)) != -1:
+            s.send('JOIN %s\r\n' %channel)
+            #if data.find(':Cannot join channel') != -1:
+        def get_page(url):
+            get = urllib2.Request(url, headers=headers_)
+            html = urllib2.urlopen(get)
+            html = html.read()
+            for i ,n in html_entities.iteritems():
+                html = html.replace(i, n)
+            return html
         if '.show ' in mss:
             x = mss.split('.show ')[-1]
             feild = {
             'query': x
             }
             urlsearch = 'https://trakt.tv/search?'
-            get = urllib2.Request(urlsearch+urlencode(feild), headers=headers_)
+            url = urlsearch+urlencode(feild)
+            get = urllib2.Request(url, headers=headers_)
             html = urllib2.urlopen(get)
             html = html.read()
+            #html = get_page(url)
             match = re.compile(r'(https\:\/\/\w+\.\w+\/\w{6}\/\S+\")')
             #match = re.compile(r'(\<meta\w{7})')
             match = re.search(match, html)
@@ -91,40 +104,62 @@ def irc(HOST, channel):
                 tags_ = ['/people/','href','=','"']
                 for tag in tags_:
                     director = director.replace(tag,'')
+                director = director.replace(' ','')
                 director = director.capitalize()
-                s.send('PRIVMSG %s :DIRECTOR:%s\r\n' %(channel, director))
-        match = re.compile(r'((http|https)+\:..\d\w+\.\w+\/\w{1,6}\/\w{3}\/\d+\S+)')
-        _8churl = re.search(match,data)
-        if _8churl:
-            thread_url = _8churl.group()
-            get = urllib2.Request(thread_url, headers=headers_)
-            html = urllib2.urlopen(get)
-            html = html.read()
-            match = re.compile(r'(og\:\w{11}\"\s\w+\=\"(.*?)+\>)')
-            op = re.search(match, html)
-            if op:
-                op_post = op.group()
+                hy = director.index('-')
+                hy = hy + 1
+                s.send('PRIVMSG %s :DIRECTOR: %s\r\n' %(channel, director))
+            #language
+            match = re.compile(r'(Language\S+\<\/li)')
+            lang = re.search(match, html)
+            if lang:
+                ftags = ['Language', '</label>', '</li']
+                lang = lang.group()
                 for t in ftags:
-                    op_post = op_post.replace(t,'')
-                for i, n in html_entities.iteritems():
-                    op_post = op_post.replace(i,n)
-                s.send('PRIVMSG %s :[OP]: %s\r\n' %(channel, op_post))
+                    lang = lang.replace(t,'')
+                if lang != 'English':
+                    base_url = 'https://isubtitles.net'
+                    s_url = 'https://isubtitles.net/search?'
+                    feild = {
+                            'kwd': x
+                            }
+                    get = urllib2.Request(s_url+urlencode(feild), headers=headers_)
+                    html = urllib2.urlopen(get)
+                    html = html.read()
+                    match = re.compile(r'(\<a\shref\S+\/eng\w+\/\d+\"\>(.*?)\<)')
+                    subs = re.finditer(match, html)
+                    subs_ =''
+                    if match:
+                        for sb in subs:
+                            subs_+= sb.group()
+                        subs_ = subs_.replace('<a href="', base_url)
+                        subs_ = subs_.replace('">','')
+                        subs_ = subs_replace('<','\n')
+                        print subs_
         #youtube title
-        match = re.compile(r'((https)+\:)\S+youtube\.\w+\/\w+\?\w\=\S+')
+        match = re.compile(r'((https)+\S+)')
         yt_url = re.search(match, data)
         if yt_url:
-            get = urllib2.Request(yt_url.group(),headers=headers_)
-            html = urllib2.urlopen(get)
-            html = html.read()
-            match = re.compile(r'(title\>(.*?)\<)') #youtube title
-            title = re.search(match,html)
-            if title:
-                title = title.group()
-                for t in ftags:
-                    title = title.replace(t,'')
-                s.send('PRIVMSG %s :[TITLE] %s \r\n' %(channel, title))
+            yt_url = yt_url.group()
+            try:
+                html = get_page(yt_url)
+            except urllib2.HTTPError, e:
+                s.send('PRIVMSG %s :[PAGE]: %s\r\n' %(channel, e.code))
+            else:
+                html = get_page(yt_url)
+                match = re.compile(r'(title\>(.*?)\<)') #youtube title
+                title = re.search(match,html)
+                if title:
+                    title = title.group()
+                    ftags = ['og:description','"','/>','content=', 'title>', '>','<']
+                    for t in ftags:
+                        title = title.replace(t,'')
+                    s.send('PRIVMSG %s :[TITLE] %s \r\n' %(channel, title))
 
 if __name__ == '__main__':
     def main():
         irc(argv[1], argv[2])
-    main()
+    try:
+        main()
+    except KeyboardInterrupt, e:
+        print 'Interrupted', e
