@@ -3,7 +3,7 @@ import socket
 import string
 import re
 import urllib2
-from sys import argv
+from sys import argv, exit
 from urllib import urlencode
 import time
 user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1"
@@ -19,7 +19,7 @@ html_entities = {
     '.': '. '
 }
 #host = argv[1]
-nick = "grep_bot"
+nick = "mgrep_bot"
 PORT = 6667
 #chan = argv[2]
 readbuffer = ""
@@ -44,13 +44,14 @@ def irc(HOST, channel):
             #if data.find(':Cannot join channel') != -1:
         def get_page(url):
             get = urllib2.Request(url, headers=headers_)
-            html = urllib2.urlopen(get)
+            html = urllib2.urlopen(get, timeout=10)
             html = html.read()
             for i ,n in html_entities.iteritems():
                 html = html.replace(i, n)
+            html = html.replace('\n',' ')
             return html
-        if '.show ' in mss:
-            x = mss.split('.show ')[-1]
+        if '!mgrep ' in mss:
+            x = mss.split('!mgrep ')[-1]
             feild = {
             'query': x
             }
@@ -59,6 +60,7 @@ def irc(HOST, channel):
             get = urllib2.Request(url, headers=headers_)
             html = urllib2.urlopen(get)
             html = html.read()
+            html = html.replace('\n', ' ')
             #html = get_page(url)
             match = re.compile(r'(https\:\/\/\w+\.\w+\/\w{6}\/\S+\")')
             #match = re.compile(r'(\<meta\w{7})')
@@ -105,9 +107,14 @@ def irc(HOST, channel):
                 for tag in tags_:
                     director = director.replace(tag,'')
                 director = director.replace(' ','')
+                #director = cap_word(director)
+                match = re.compile(r'(\w\d\S+)')
+                match = re.search(match, director)
+                if match:
+                    director = director.replace(match.group(),'')
+                director = director.replace('-','\n')
                 director = director.capitalize()
-                hy = director.index('-')
-                hy = hy + 1
+                director = director.replace('\n', ' ')
                 s.send('PRIVMSG %s :DIRECTOR: %s\r\n' %(channel, director))
             #language
             match = re.compile(r'(Language\S+\<\/li)')
@@ -118,24 +125,19 @@ def irc(HOST, channel):
                 for t in ftags:
                     lang = lang.replace(t,'')
                 if lang != 'English':
-                    base_url = 'https://isubtitles.net'
-                    s_url = 'https://isubtitles.net/search?'
-                    feild = {
-                            'kwd': x
-                            }
-                    get = urllib2.Request(s_url+urlencode(feild), headers=headers_)
+                    url = 'https://subscene.com/subtitles/title?'
+                    field ={
+                            'q':x
+                        }
+                    url = url+urlencode(field)
+                    get = urllib2.Request(url, headers=headers_)
                     html = urllib2.urlopen(get)
+                    url = html.geturl()
                     html = html.read()
-                    match = re.compile(r'(\<a\shref\S+\/eng\w+\/\d+\"\>(.*?)\<)')
-                    subs = re.finditer(match, html)
-                    subs_ =''
-                    if match:
-                        for sb in subs:
-                            subs_+= sb.group()
-                        subs_ = subs_.replace('<a href="', base_url)
-                        subs_ = subs_.replace('">','')
-                        subs_ = subs_replace('<','\n')
-                        print subs_
+                    match = re.compile(r'(\/subtitles\/\S+\")')
+                    match  = re.findall(match,html)
+                    s.send('PRIVMSG %s :SUBS: %s\r\n' %(channel,url))
+
         #youtube title
         match = re.compile(r'((https)+\S+)')
         yt_url = re.search(match, data)
@@ -154,7 +156,7 @@ def irc(HOST, channel):
                     ftags = ['og:description','"','/>','content=', 'title>', '>','<']
                     for t in ftags:
                         title = title.replace(t,'')
-                    s.send('PRIVMSG %s :[TITLE] %s \r\n' %(channel, title))
+                    s.send('PRIVMSG %s :LINK %s \r\n' %(channel, title))
 
 if __name__ == '__main__':
     def main():
@@ -162,4 +164,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt, e:
-        print 'Interrupted', e
+        exit(0)
