@@ -6,6 +6,7 @@ import urllib2
 from sys import argv, exit
 from urllib import urlencode
 import time
+from datetime import datetime
 user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1"
 headers_ = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -18,6 +19,7 @@ html_entities = {
     '&gt;': '>',
     '.': '. '
 }
+
 #host = argv[1]
 nick = "mgrep_bot"
 PORT = 6667
@@ -36,10 +38,12 @@ def irc(HOST, channel):
         mss = data.split(':')[-1]
         nc = data.split(':')[0]
         print data
+        now = datetime.now()
+        log = '[ %s ]: %s'%(now,data)
         if data.find('PING') != -1:
             s.send('PONG ' +  data.split()[1] +'\r\n')
-        with open('log.txt','wb')as f:
-            f.write(mss)
+        with open('ircbot.log','a')as f:
+            f.write(log)
         if data.find('KICK %s %s' %(channel, nick)) != -1:
             s.send('JOIN %s\r\n' %channel)
             #if data.find(':Cannot join channel') != -1:
