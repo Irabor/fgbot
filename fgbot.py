@@ -34,6 +34,7 @@ def irc(HOST, channel):
     while True:
         data = s.recv(5000)
         mss = data.split(':')[-1]
+        nc = data.split(':')[0]
         print data
         if data.find('PING') != -1:
             s.send('PONG ' +  data.split()[1] +'\r\n')
@@ -44,7 +45,9 @@ def irc(HOST, channel):
             #if data.find(':Cannot join channel') != -1:
         def get_page(url):
             get = urllib2.Request(url, headers=headers_)
-            html = urllib2.urlopen(get, timeout=10)
+            actual_url = urllib2.urlopen(get).geturl()
+            get = urllib2.Request(url, headers=headers_)
+            html = urllib2.urlopen(get)
             html = html.read()
             for i ,n in html_entities.iteritems():
                 html = html.replace(i, n)
@@ -139,24 +142,35 @@ def irc(HOST, channel):
                     s.send('PRIVMSG %s :SUBS: %s\r\n' %(channel,url))
 
         #youtube title
-        match = re.compile(r'((https)+\S+)')
+        match = re.compile(r'((http(s)?)+\:\/\/\S+)')
         yt_url = re.search(match, data)
         if yt_url:
             yt_url = yt_url.group()
-            try:
-                html = get_page(yt_url)
-            except urllib2.HTTPError, e:
-                s.send('PRIVMSG %s :[PAGE]: %s\r\n' %(channel, e.code))
+            if '0x0' in yt_url:
+                match = re.compile(r'(\S+\~)')
+                match = re.search(match, data)
+                if match:
+                    ni = match.group()
+                    ni = ni.replace(':','')
+                    s.send('PRIVMSG %s :Nice try %s\r\n' %(channel,ni))
             else:
-                html = get_page(yt_url)
-                match = re.compile(r'(title\>(.*?)\<)') #youtube title
-                title = re.search(match,html)
-                if title:
-                    title = title.group()
-                    ftags = ['og:description','"','/>','content=', 'title>', '>','<']
-                    for t in ftags:
-                        title = title.replace(t,'')
-                    s.send('PRIVMSG %s :LINK %s \r\n' %(channel, title))
+                try:
+                    html = get_page(yt_url)
+                except urllib2.URLError, e:
+                    pass
+                    #s.send('PRIVMSG %s :[PAGE]: %s\r\n' %(channel, e.reason))
+                except urllib2.HTTPError,e:
+                    s.send('PRIVMSG %s :[page]: %s\r\n' %(channel, e.reason))
+                else:
+                    html = get_page(yt_url)
+                    match = re.compile(r'(title\>(.*?)\<)') #youtube title
+                    title = re.search(match,html)
+                    if title:
+                        title = title.group()
+                        ftags = ['og:description','"','/>','content=', 'title>', '>','<']
+                        for t in ftags:
+                            title = title.replace(t,'')
+                        s.send('PRIVMSG %s :[title] %s \r\n' %(channel, title))
 
 if __name__ == '__main__':
     def main():
