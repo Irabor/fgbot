@@ -5,6 +5,7 @@ import re
 import urllib2
 from sys import argv, exit
 from urllib import urlencode
+from bs4 import BeautifulSoup
 import time
 from datetime import datetime
 user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1"
@@ -91,23 +92,23 @@ def irc(HOST, channel):
                 tags = ['itemprop','"','genre','>','=']
                 for tag in tags:
                     genre_ = genre_.replace(tag,'')
-                s.send('PRIVMSG %s :GENRE:%s\r\n' %(channel,genre_))
+                s.send('PRIVMSG %s :\x02GENRE:%s\r\n' %(channel,genre_))
             #8ch op
             match = re.compile(r'(meta\s\w{8}\=\S+\:\w{11}\"\s\w+\=\"(.*?)\")') #description
             descrip = re.search(match,html)
             if descrip == None:
-                s.send('PRIVMSG %s :SYNOPISIS: no synonpsis\r\n'%(channel))
+                s.send('PRIVMSG %s :\x02SYNOPISIS: no synonpsis\r\n'%(channel))
             else:
                 descrip = descrip.group()
                 tags = ['meta property', '=','og:description','"', 'content']
                 for tag in tags:
                     descrip = descrip.replace(tag,'')
-                s.send('PRIVMSG %s :SYNOPSIS:%s\r\n' %(channel, descrip))
+                s.send('PRIVMSG %s :\x02SYNOPSIS:\x032%s\r\n' %(channel, descrip))
             #director
             match = re.compile(r'( href\=\"\/people\/\S+\")') #director
             director = re.search(match,html)
             if director == None:
-                s.send('PRIVMSG %s :DIRECTOR: no director...\r\n'%(channel))
+                s.send('PRIVMSG %s :\x02DIRECTOR: no director...\r\n'%(channel))
             else:
                 director = director.group()
                 tags_ = ['/people/','href','=','"']
@@ -122,7 +123,7 @@ def irc(HOST, channel):
                 director = director.replace('-','\n')
                 director = director.capitalize()
                 director = director.replace('\n', ' ')
-                s.send('PRIVMSG %s :DIRECTOR: %s\r\n' %(channel, director))
+                s.send('PRIVMSG %s :\x02DIRECTOR: \x032%s\r\n' %(channel, director))
             #language
             match = re.compile(r'(Language\S+\<\/li)')
             lang = re.search(match, html)
@@ -143,13 +144,14 @@ def irc(HOST, channel):
                     html = html.read()
                     match = re.compile(r'(\/subtitles\/\S+\")')
                     match  = re.findall(match,html)
-                    s.send('PRIVMSG %s :SUBS: %s\r\n' %(channel,url))
-
+                    s.send('PRIVMSG %s :\x02SUBS: \x032%s\r\n' %(channel,url))
         #youtube title
         match = re.compile(r'((http(s)?)+\:\/\/\S+)')
         yt_url = re.search(match, data)
         if yt_url:
             yt_url = yt_url.group()
+            if 'PRIVMSG' in yt_url:
+                s.send('PRIVMSG %s :Nice try %s\r\n' %(channel,ni))
             if '0x0' in yt_url:
                 match = re.compile(r'(\S+\~)')
                 match = re.search(match, data)
@@ -167,14 +169,14 @@ def irc(HOST, channel):
                     s.send('PRIVMSG %s :[page]: %s\r\n' %(channel, e.reason))
                 else:
                     html = get_page(yt_url)
-                    match = re.compile(r'(title\>(.*?)\<)') #youtube title
-                    title = re.search(match,html)
-                    if title:
-                        title = title.group()
-                        ftags = ['og:description','"','/>','content=', 'title>', '>','<']
-                        for t in ftags:
-                            title = title.replace(t,'')
-                        s.send('PRIVMSG %s :[title] %s \r\n' %(channel, title))
+                    soup = BeautifulSoup(html, 'lxml')
+                    try:
+                        title = soup.title.string.encode('utf-8')
+                    except AttributeError:
+                        pass
+                    else:
+                        title = soup.title.string.encode('utf-8')
+                        s.send('PRIVMSG %s :\x02[title]: \x032%s \r\n' %(channel, title))
 
 if __name__ == '__main__':
     def main():
