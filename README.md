@@ -1,1 +1,6 @@
-# Tbot
+### tbot
+A simple irc bots that gets a posted url and print out the title of page
+### usage:
+...
+tbot.pl [nick] [server] [channel]
+...
