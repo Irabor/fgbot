@@ -3,6 +3,7 @@ use strict;
 use LWP::Simple;
 use HTML::Tree;
 use IO::Socket::INET;
+
 sub parser(){
 		my ($url) = @_;
 		my $ua = "Mozilla/5.0 (Windows NT 5.1; rv:2.0) Gecko/20100101 Firefox/4.0";
@@ -23,9 +24,13 @@ sub get_title(){
 				return $title;
 		}
 }
-my $host = $ARGV[0];
-my $channel = $ARGV[1];
-my $user = 'prrrrrrrrrrrrrrrrrrrrr';
+if(@ARGV > 3 || @ARGV < 3){
+		print "Usage: tbot [NICK] [SERVER] [CHANNEL]\n";
+		exit;
+}
+my $user = $ARGV[0];
+my $host = $ARGV[1];
+my $channel = $ARGV[2];
 my $port = 6667;
 my $sock = new IO::Socket::INET(
 		PeerAddr => $host,
