@@ -69,7 +69,7 @@ while(1){
 				$pg =~ s/PING/PONG/;
 				print $sock "$1\r\n";
 		}
-		if($line =~ /($channel\s.*)/i){
+		if($line =~ /(PRIVMSG\s$channel\s.*)/i){
 				if($1 =~ /(http(s)?\S+)/){
 						my $url = $1;
 						if($url =~ /\.(bin|png|jpeg|jpg|png|gif|webm|gif|pdf)/si){
