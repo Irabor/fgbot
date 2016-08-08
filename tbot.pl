@@ -2,7 +2,7 @@
 use strict;
 use LWP::Simple;
 use HTML::Tree;
-use IO::Socket::INET;
+use IO::Socket::SSL;
 
 sub parser(){
 		my ($url) = @_;
@@ -31,11 +31,13 @@ if(@ARGV > 3 || @ARGV < 3){
 my $user = $ARGV[0];
 my $host = $ARGV[1];
 my $channel = $ARGV[2];
-my $port = 6667;
-my $sock = new IO::Socket::INET(
+my $port = 9999;
+my $sock = new IO::Socket::SSL(
 		PeerAddr => $host,
 		PeerPort => $port,
 		Proto => 'tcp',
+		SSL_verify_mode => SSL_VERIFY_PEER,
+		SSL_ca_path => '/etc/ssl/certs'
 ) or die "Couldn't connect: $!";
 sub reconnect{
 		my $sock = new IO::Socket::INET(
