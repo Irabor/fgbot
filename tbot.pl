@@ -58,11 +58,15 @@ sub send{
 sub error_code{
 		my ($url) = @_;
 }
-sub who{
-		print $sock "WHOIS Duff_man\r\n";
+sub join_ch{
+		my ($ch) = @_;
+		print $sock "JOIN $ch\r\n";
 }
 &connect;
-&who;
+sub ch_nick{
+		my ($ch) = @_;
+		print $sock "NICK $ch\r\n";
+}
 while(1){
 		my $line = <$sock>;
 		print $line;
@@ -74,9 +78,8 @@ while(1){
 		if($line =~ /(PRIVMSG\s$channel\s.*)/i){
 				if($1 =~ /(http(s)?\S+)/){
 						my $url = $1;
-						if($url =~ /\.(bin|png|jpeg|jpg|png|gif|webm|gif|pdf)/si){
+						if($url =~ /\.(bin|png|jpeg|jpg|png|gif|webm|gif|pdf|mp4|mp3)/si){
 								my $file = "$url | $1";
-								&send($file);
 								#do nothing
 						}
 						elsif($url =~ /0x0/){
@@ -89,8 +92,16 @@ while(1){
 						}
 				}
 		}
+		if($line =~ /(:Duff_man\S+\sPRIVMSG\s$channel.+)/i){
+				my $nick = $1;
+				if($nick =~ /(.nick\s\S+)/){
+						$nick =~ s/:Duff_man\S+\sPRIVMSG\s$channel\s:\S+\s//;
+						print "$nick\n";
+						&ch_nick($nick);
+		}
+		}
 		if($line =~ /KICK\s$channel\s$user/){
-				sleep 5;
+				sleep 3;
 				&connect;
 				#prn sc JI canlr\n";
 		}
