@@ -2,8 +2,12 @@
 A simple irc bot that gets a posted url and print out the title of the url page
 
 ```
-usage: tbot [NICK] [SERVER] [CHANNEL]
-.nick [nick]
+usage: tbot [NICK] [SERVER] [CHANNEL] [PORT]
+```
+### commands:
+
+```
+.nick [NICK] #Change nick
 ```
 
 MIT License
